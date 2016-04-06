@@ -3,28 +3,49 @@
 var fs = require('fs'),
     vm = require('vm');
 
+function cloneInterface(anInterface) {
+  var clone = {};
+  for (var key in anInterface) {
+    clone[key] = wrapFunction(key, anInterface[key]);
+  }
+  return clone;
+}
+
+function wrapFunction(fnName, fn) {
+  return function wrapper() {
+    var args = [];
+    Array.prototype.push.apply(args, arguments);
+
+    var callback = args[args.length - 1];
+    if(typeof callback == 'function'){
+      args[args.length - 1] = wrapCallback(fnName, callback);
+    }
+
+    console.log('Call: ' + fnName);
+    console.dir(args);
+    return fn.apply(undefined, args);
+  }
+}
+
+function wrapCallback(callbackName, fn) {
+  return function wrapper(){
+    var args = [];
+    Array.prototype.push.apply(args, arguments);
+
+    console.log('Callback :');
+    for (var i = 0; i< args.length; i++){
+      console.dir(args[i]);
+    }
+    return fn.apply(undefined, arguments);
+  }
+}
+
 // Объявляем хеш из которого сделаем контекст-песочницу
 var context = {
   module: {},
   console: console,
   // Помещаем ссылку на fs API в песочницу
-  fs: fs,
-  // Оборачиваем функцию setTimeout в песочнице
-  setTimeout: function(callback, timeout) {
-    // Добавляем поведение при вызове setTimeout
-    console.log(
-      'Call: setTimeout, ' +
-      'callback function: ' + callback.name + ', ' +
-      'timeout: ' + timeout
-    );
-    setTimeout(function() {
-      // Добавляем поведение при срабатывании таймера
-      console.log('Event: setTimeout, before callback');
-      // Вызываем функцию пользователя на событии таймера
-      callback();
-      console.log('Event: setTimeout, after callback');
-    }, timeout);
-  }
+  fs: cloneInterface(fs)
 };
 
 // Преобразовываем хеш в контекст
