@@ -3,6 +3,9 @@
 var fs = require('fs'),
     vm = require('vm');
 
+var fnInvokeCount = 0;
+var cllbckInvokeCount = 0;
+
 function cloneInterface(anInterface) {
   var clone = {};
   for (var key in anInterface) {
@@ -13,11 +16,13 @@ function cloneInterface(anInterface) {
 
 function wrapFunction(fnName, fn) {
   return function wrapper() {
+    fnInvokeCount++;
     var args = [];
     Array.prototype.push.apply(args, arguments);
 
     var callback = args[args.length - 1];
     if(typeof callback == 'function'){
+      cllbckInvokeCount++;
       args[args.length - 1] = wrapCallback(fnName, callback);
     }
 
@@ -45,8 +50,13 @@ var context = {
   module: {},
   console: console,
   // Помещаем ссылку на fs API в песочницу
-  fs: cloneInterface(fs)
+  fs: cloneInterface(fs),
+  setInterval : setInterval
 };
+
+setInterval(function () {
+  console.log('currently functions invokes : ' + fnInvokeCount + ' currently callbacks invokes : ' + cllbckInvokeCount);
+}, 30000);
 
 // Преобразовываем хеш в контекст
 context.global = context;
